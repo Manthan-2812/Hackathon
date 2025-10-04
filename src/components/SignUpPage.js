@@ -203,7 +203,7 @@ const SignUpPage = () => {
                   className="checkbox-input"
                 />
                 <span className="checkbox-text">
-                  I agree to the <a href="#" className="link">Terms of Service</a> and <a href="#" className="link">Privacy Policy</a>
+                  I agree to the <button className="link-button" onClick={() => alert('Terms of Service would open here')}>Terms of Service</button> and <button className="link-button" onClick={() => alert('Privacy Policy would open here')}>Privacy Policy</button>
                 </span>
               </label>
               {errors.agreeToTerms && <span className="error-message">{errors.agreeToTerms}</span>}

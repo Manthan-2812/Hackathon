@@ -13,7 +13,7 @@ Start-Sleep -Seconds 5
 
 # Start Frontend Server
 Write-Host "Starting Frontend Server..." -ForegroundColor Yellow
-Set-Location "..\Frontened\Hackathon-main\Hackathon-main"
+Set-Location ".."
 Start-Process powershell -ArgumentList "-NoExit", "-Command", "npm start"
 
 Write-Host ""

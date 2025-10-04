@@ -104,7 +104,9 @@ def analyze_with_llm(text: str, title: str = None) -> Dict[str, Any]:
     """
     try:
         # Configure Gemini API
-        api_key = os.getenv("GEMINI_API_KEY", "AIzaSyBBndYY7C97GtA1OzVgqyub9mcp_S9Zh5U")
+        api_key = os.getenv("GEMINI_API_KEY")
+        if not api_key or api_key == "your-actual-gemini-api-key-here":
+            raise ValueError("GEMINI_API_KEY not properly configured. Please set it in .env file.")
         genai.configure(api_key=api_key)
         
         # Initialize the model
@@ -444,10 +446,23 @@ async def analyze_text(request: TextAnalysisRequest):
     Analyze text content for fake news
     """
     try:
-        result = comprehensive_analysis(request.text, request.title, "text")
+        # Input validation
+        if not request.text or len(request.text.strip()) < 10:
+            raise HTTPException(status_code=400, detail="Text must be at least 10 characters long")
+        
+        if len(request.text) > 10000:
+            raise HTTPException(status_code=400, detail="Text too long. Maximum 10,000 characters allowed")
+        
+        # Clean and validate text
+        cleaned_text = request.text.strip()
+        
+        result = comprehensive_analysis(cleaned_text, request.title, "text")
         return result
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"Text analysis error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during text analysis")
 
 @app.post("/analyze/url", response_model=AnalysisResponse)
 async def analyze_url(request: URLAnalysisRequest):
@@ -455,15 +470,32 @@ async def analyze_url(request: URLAnalysisRequest):
     Analyze content from URL
     """
     try:
+        # Input validation
+        if not request.url or not request.url.strip():
+            raise HTTPException(status_code=400, detail="URL is required")
+        
+        # Basic URL validation
+        if not request.url.startswith(('http://', 'https://')):
+            raise HTTPException(status_code=400, detail="Invalid URL format. Must start with http:// or https://")
+        
         # Fetch content from URL
-        response = requests.get(request.url, timeout=10)
-        response.raise_for_status()
+        try:
+            response = requests.get(request.url, timeout=15, headers={
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+            })
+            response.raise_for_status()
+        except requests.exceptions.RequestException as e:
+            raise HTTPException(status_code=400, detail=f"Failed to fetch URL: {str(e)}")
         
         # Extract text from HTML (simplified)
         text = response.text
         # Remove HTML tags
         text = re.sub(r'<[^>]+>', ' ', text)
         text = re.sub(r'\s+', ' ', text).strip()
+        
+        # Validate extracted text
+        if len(text) < 50:
+            raise HTTPException(status_code=400, detail="Insufficient text content extracted from URL")
         
         # Extract title from HTML
         title_match = re.search(r'<title>(.*?)</title>', response.text, re.IGNORECASE)
@@ -473,8 +505,11 @@ async def analyze_url(request: URLAnalysisRequest):
         result.analysis["url"] = request.url
         return result
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"URL analysis failed: {str(e)}")
+        print(f"URL analysis error: {e}")
+        raise HTTPException(status_code=500, detail="Internal server error during URL analysis")
 
 @app.post("/analyze/image", response_model=AnalysisResponse)
 async def analyze_image(request: ImageAnalysisRequest):

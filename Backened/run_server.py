@@ -8,6 +8,7 @@ import sys
 import subprocess
 import uvicorn
 from pathlib import Path
+from dotenv import load_dotenv
 
 def check_requirements():
     """Check if all required packages are installed"""
@@ -64,21 +65,24 @@ def check_spacy_model():
         except subprocess.CalledProcessError:
             print("❌ Failed to install spaCy model. Some features may not work.")
             return False
-
 def setup_environment():
     """Setup environment variables"""
+    load_dotenv()  # Load environment variables from .env file
     if not os.getenv("GEMINI_API_KEY"):
         print("⚠️  GEMINI_API_KEY not set. LLM features will be limited.")
         print("Get your free Gemini API key from: https://makersuite.google.com/app/apikey")
-        print("Set your Gemini API key: export GEMINI_API_KEY='AIzaSyB5WEzIFDW3Y0fa1qSkG5WIXnt2xpt6mlk'")
+        print("Set your Gemini API key in .env file: GEMINI_API_KEY=your-key-here")
+    
     
     # Create .env file if it doesn't exist
     env_file = Path(".env")
     if not env_file.exists():
         with open(env_file, "w") as f:
             f.write("# Fake News Detection API Configuration\n")
-            f.write("GEMINI_API_KEY=AIzaSyBBndYY7C97GtA1OzVgqyub9mcp_S9Zh5U\n")
+            f.write("# Get your free Gemini API key from: https://makersuite.google.com/app/apikey\n")
+            f.write("GEMINI_API_KEY=your-actual-gemini-api-key-here\n")
             f.write("DEBUG=True\n")
+            f.write("DATABASE_URL=sqlite:///./fakenews.db\n")
         print("✅ Created .env file template")
 
 def main():

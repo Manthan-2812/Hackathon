@@ -186,8 +186,8 @@ const LandingPage = () => {
               <h4>Company</h4>
               <ul>
                 <li><a href="#about">About</a></li>
-                <li><a href="#">Contact</a></li>
-                <li><a href="#">Privacy</a></li>
+                <li><button className="link-button" onClick={() => window.open('mailto:contact@fakenewsdetector.com')}>Contact</button></li>
+                <li><button className="link-button" onClick={() => alert('Privacy policy would open here')}>Privacy</button></li>
               </ul>
             </div>
           </div>
