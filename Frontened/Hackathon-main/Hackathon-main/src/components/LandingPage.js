@@ -16,7 +16,7 @@ const LandingPage = () => {
               <a href="#features">Features</a>
               <a href="#how-it-works">How it Works</a>
               <a href="#about">About</a>
-              <Link to="/signup" className="btn btn-primary">Get Started</Link>
+              <Link to="/signup" className="btn btn-primary ">Get Started</Link>
             </nav>
           </div>
         </div>

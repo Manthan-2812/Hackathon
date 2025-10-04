@@ -35,7 +35,7 @@
 }
 
 .nav-links a {
-  color: #64748b;
+  color: #000000;
   text-decoration: none;
   font-weight: 500;
   transition: color 0.2s ease;
@@ -44,6 +44,7 @@
 .nav-links a:hover {
   color: #667eea;
 }
+
 
 /* Hero Section */
 .hero {
@@ -97,6 +98,7 @@
 .btn-large {
   padding: 16px 32px;
   font-size: 16px;
+  color: white !important;
 }
 
 .hero-stats {
