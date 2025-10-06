@@ -1,9 +1,28 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
+import TermsModal from './TermsModal';
 import './SignUpPage.css';
 
 const SignUpPage = () => {
   const navigate = useNavigate();
+  const { login } = useUser();
+  
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [modalType, setModalType] = useState('terms');
+
+  const handleTermsClick = (e) => {
+    e.preventDefault();
+    setModalType('terms');
+    setShowTermsModal(true);
+  };
+
+  const handlePrivacyClick = (e) => {
+    e.preventDefault();
+    setModalType('privacy');
+    setShowTermsModal(true);
+  };
+
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -80,8 +99,8 @@ const SignUpPage = () => {
     try {
       await new Promise(resolve => setTimeout(resolve, 2000));
       
-      // In a real app, you would make an API call here
-      console.log('Sign up data:', formData);
+      // Save user data and login
+      login(formData);
       
       // Navigate to dashboard after successful signup
       navigate('/dashboard');
@@ -203,7 +222,7 @@ const SignUpPage = () => {
                   className="checkbox-input"
                 />
                 <span className="checkbox-text">
-                  I agree to the <button className="link-button" onClick={() => alert('Terms of Service would open here')}>Terms of Service</button> and <button className="link-button" onClick={() => alert('Privacy Policy would open here')}>Privacy Policy</button>
+                  I agree to the <button className="link-button" onClick={handleTermsClick}>Terms of Service</button> and <button className="link-button" onClick={handlePrivacyClick}>Privacy Policy</button>
                 </span>
               </label>
               {errors.agreeToTerms && <span className="error-message">{errors.agreeToTerms}</span>}
@@ -254,6 +273,12 @@ const SignUpPage = () => {
           </div>
         </div>
       </div>
+
+      <TermsModal 
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        type={modalType}
+      />
     </div>
   );
 };

@@ -1,13 +1,19 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useUser } from '../context/UserContext';
 import './Dashboard.css';
+import apiService from '../services/api';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
+  const { user, logout } = useUser();
   const [activeTab, setActiveTab] = useState('detect');
   const [inputText, setInputText] = useState('');
   const [inputUrl, setInputUrl] = useState('');
+  const [inputImage, setInputImage] = useState(null);
   const [analysisResult, setAnalysisResult] = useState(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [apiStatus, setApiStatus] = useState('checking');
   const [analysisHistory, setAnalysisHistory] = useState([
     {
       id: 1,
@@ -35,44 +41,108 @@ const Dashboard = () => {
     }
   ]);
 
+  // Check API status on mount
+  useEffect(() => {
+    const checkAPI = async (retryCount = 0) => {
+      try {
+        console.log('Checking API health...');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+        
+        const backendURL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:8000';
+        const response = await fetch(`${backendURL}/health`, {
+          signal: controller.signal,
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        clearTimeout(timeoutId);
+        
+        if (response.ok) {
+          const health = await response.json();
+          console.log('API Health Response:', health);
+          setApiStatus(health.status === 'healthy' ? 'online' : 'offline');
+        } else {
+          console.log('API Response not OK:', response.status);
+          setApiStatus('offline');
+        }
+      } catch (error) {
+        console.log('API Health Check Error:', error.message);
+        if (retryCount < 2) {
+          console.log(`Retrying health check... (${retryCount + 1}/2)`);
+          setTimeout(() => checkAPI(retryCount + 1), 2000);
+        } else {
+          setApiStatus('offline');
+        }
+      }
+    };
+    
+    checkAPI();
+    
+    // Also check periodically
+    const interval = setInterval(() => checkAPI(), 30000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, []);
+
   const handleTextAnalysis = async () => {
     if (!inputText.trim()) return;
 
     setIsAnalyzing(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      // Use real API if available, otherwise fallback to mock
+      let result;
       
-      // Mock analysis result
-      const mockResult = {
-        content: inputText,
-        result: Math.random() > 0.5 ? "REAL" : "FAKE",
-        confidence: Math.floor(Math.random() * 20) + 80,
-        date: new Date().toISOString().split('T')[0],
-        analysis: {
-          factualAccuracy: Math.floor(Math.random() * 20) + 75,
-          sourceCredibility: Math.floor(Math.random() * 20) + 70,
-          sentimentBias: Math.floor(Math.random() * 20) + 60,
-          linguisticPatterns: Math.floor(Math.random() * 20) + 80
-        },
-        factors: [
-          "Content matches verified sources",
-          "Author has established credibility",
-          "Language patterns consistent with factual reporting",
-          "Cross-referenced with multiple databases"
-        ],
-        recommendations: [
-          "Content appears to be authentic",
-          "Source verification passed",
-          "Continue monitoring for updates"
-        ]
-      };
+      if (apiStatus === 'online') {
+        const apiResult = await apiService.analyzeText(inputText);
+        
+        // Transform API response to match UI format
+        result = {
+          content: inputText,
+          result: apiResult.verdict,
+          confidence: Math.round(apiResult.confidence * 100),
+          date: new Date().toISOString().split('T')[0],
+          analysis: {
+            factualAccuracy: apiResult.analysis?.llm_analysis?.factual_indicators ? 85 : 70,
+            sourceCredibility: apiResult.analysis?.llm_analysis?.source_indicators ? 80 : 65,
+            sentimentBias: apiResult.analysis?.sentiment_analysis?.sentiment?.compound ? 
+              Math.round((1 + apiResult.analysis.sentiment_analysis.sentiment.compound) * 50) : 60,
+            linguisticPatterns: 75
+          },
+          factors: apiResult.factors || ["Analysis completed"],
+          recommendations: apiResult.recommendations || ["Verify with additional sources"]
+        };
+      } else {
+        // Fallback to mock data if API is offline
+        result = {
+          content: inputText,
+          result: Math.random() > 0.5 ? "REAL" : "FAKE",
+          confidence: Math.floor(Math.random() * 20) + 80,
+          date: new Date().toISOString().split('T')[0],
+          analysis: {
+            factualAccuracy: Math.floor(Math.random() * 20) + 75,
+            sourceCredibility: Math.floor(Math.random() * 20) + 70,
+            sentimentBias: Math.floor(Math.random() * 20) + 60,
+            linguisticPatterns: Math.floor(Math.random() * 20) + 80
+          },
+          factors: [
+            "Content matches verified sources",
+            "Author has established credibility",
+            "Language patterns consistent with factual reporting"
+          ],
+          recommendations: [
+            "API offline - using mock analysis",
+            "Start backend server for real analysis"
+          ]
+        };
+      }
 
-      setAnalysisResult(mockResult);
-      setAnalysisHistory(prev => [mockResult, ...prev]);
+      setAnalysisResult(result);
+      setAnalysisHistory(prev => [{...result, id: Date.now()}, ...prev]);
     } catch (error) {
       console.error('Analysis error:', error);
+      alert('Analysis failed: ' + error.message);
     } finally {
       setIsAnalyzing(false);
     }
@@ -83,43 +153,187 @@ const Dashboard = () => {
 
     setIsAnalyzing(true);
     
-    // Simulate API call
     try {
-      await new Promise(resolve => setTimeout(resolve, 4000));
+      let result;
       
-      // Mock URL analysis result
-      const mockResult = {
-        content: `Article from: ${inputUrl}`,
-        result: Math.random() > 0.4 ? "REAL" : "FAKE",
-        confidence: Math.floor(Math.random() * 25) + 75,
-        date: new Date().toISOString().split('T')[0],
-        url: inputUrl,
-        analysis: {
-          factualAccuracy: Math.floor(Math.random() * 25) + 70,
-          sourceCredibility: Math.floor(Math.random() * 25) + 65,
-          sentimentBias: Math.floor(Math.random() * 25) + 55,
-          linguisticPatterns: Math.floor(Math.random() * 25) + 75
-        },
-        factors: [
-          "Domain reputation analysis",
-          "Content cross-verification",
-          "Historical accuracy assessment",
-          "Social media sentiment analysis"
-        ],
-        recommendations: [
-          "Verify with additional sources",
-          "Check publication date and updates",
-          "Consider author credentials"
-        ]
-      };
+      if (apiStatus === 'online') {
+        const apiResult = await apiService.analyzeUrl(inputUrl);
+        
+        // Transform API response to match UI format
+        result = {
+          content: `Article from: ${inputUrl}`,
+          result: apiResult.verdict,
+          confidence: Math.round(apiResult.confidence * 100),
+          date: new Date().toISOString().split('T')[0],
+          url: inputUrl,
+          analysis: {
+            factualAccuracy: apiResult.analysis?.llm_analysis?.factual_indicators ? 85 : 70,
+            sourceCredibility: apiResult.analysis?.llm_analysis?.source_indicators ? 80 : 65,
+            sentimentBias: apiResult.analysis?.sentiment_analysis?.sentiment?.compound ? 
+              Math.round((1 + apiResult.analysis.sentiment_analysis.sentiment.compound) * 50) : 60,
+            linguisticPatterns: 75
+          },
+          factors: apiResult.factors || ["URL analysis completed"],
+          recommendations: apiResult.recommendations || ["Verify with additional sources"]
+        };
+      } else {
+        // Fallback to mock data if API is offline
+        result = {
+          content: `Article from: ${inputUrl}`,
+          result: Math.random() > 0.4 ? "REAL" : "FAKE",
+          confidence: Math.floor(Math.random() * 25) + 75,
+          date: new Date().toISOString().split('T')[0],
+          url: inputUrl,
+          analysis: {
+            factualAccuracy: Math.floor(Math.random() * 25) + 70,
+            sourceCredibility: Math.floor(Math.random() * 25) + 65,
+            sentimentBias: Math.floor(Math.random() * 25) + 55,
+            linguisticPatterns: Math.floor(Math.random() * 25) + 75
+          },
+          factors: [
+            "Domain reputation analysis",
+            "Content cross-verification",
+            "API offline - using mock analysis"
+          ],
+          recommendations: [
+            "Start backend server for real analysis",
+            "Verify with additional sources"
+          ]
+        };
+      }
 
-      setAnalysisResult(mockResult);
-      setAnalysisHistory(prev => [mockResult, ...prev]);
+      setAnalysisResult(result);
+      setAnalysisHistory(prev => [{...result, id: Date.now()}, ...prev]);
     } catch (error) {
       console.error('Analysis error:', error);
+      alert('URL analysis failed: ' + error.message);
     } finally {
       setIsAnalyzing(false);
     }
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setInputImage({
+          file: file,
+          preview: e.target.result,
+          base64: e.target.result.split(',')[1] // Remove data:image/jpeg;base64, prefix
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleImageAnalysis = async () => {
+    if (!inputImage) return;
+
+    setIsAnalyzing(true);
+    
+    try {
+      let result;
+      
+      if (apiStatus === 'online') {
+        const apiResult = await apiService.analyzeImage(inputImage.base64);
+        
+        // Transform API response to match UI format
+        result = {
+          content: `Image: ${inputImage.file.name}`,
+          result: apiResult.verdict,
+          confidence: Math.round(apiResult.confidence * 100),
+          date: new Date().toISOString().split('T')[0],
+          analysis: {
+            factualAccuracy: apiResult.analysis?.llm_analysis?.factual_indicators ? 85 : 70,
+            sourceCredibility: apiResult.analysis?.llm_analysis?.source_indicators ? 80 : 65,
+            sentimentBias: apiResult.analysis?.sentiment_analysis?.sentiment?.compound ? 
+              Math.round((1 + apiResult.analysis.sentiment_analysis.sentiment.compound) * 50) : 60,
+            linguisticPatterns: 75
+          },
+          factors: apiResult.factors || ["Image analysis completed"],
+          recommendations: apiResult.recommendations || ["Verify with additional sources"],
+          extractedText: apiResult.analysis?.extracted_text || "Text extracted from image"
+        };
+      } else {
+        // Fallback to mock data if API is offline
+        result = {
+          content: `Image: ${inputImage.file.name}`,
+          result: Math.random() > 0.5 ? "REAL" : "FAKE",
+          confidence: Math.floor(Math.random() * 20) + 80,
+          date: new Date().toISOString().split('T')[0],
+          analysis: {
+            factualAccuracy: Math.floor(Math.random() * 20) + 75,
+            sourceCredibility: Math.floor(Math.random() * 20) + 70,
+            sentimentBias: Math.floor(Math.random() * 20) + 60,
+            linguisticPatterns: Math.floor(Math.random() * 20) + 80
+          },
+          factors: [
+            "OCR text extraction completed",
+            "Image content analyzed",
+            "API offline - using mock analysis"
+          ],
+          recommendations: [
+            "Start backend server for real analysis",
+            "Verify extracted text manually"
+          ],
+          extractedText: "Sample extracted text from image (mock data)"
+        };
+      }
+
+      setAnalysisResult(result);
+      setAnalysisHistory(prev => [{...result, id: Date.now()}, ...prev]);
+    } catch (error) {
+      console.error('Image analysis error:', error);
+      alert('Image analysis failed: ' + error.message);
+    } finally {
+      setIsAnalyzing(false);
+    }
+  };
+
+  const generatePDFReport = () => {
+    if (!analysisResult) return;
+
+    // Create PDF content
+    const pdfContent = `
+FAKE NEWS DETECTION REPORT
+Generated on: ${new Date().toLocaleString()}
+User: ${user?.fullName || 'Guest'}
+
+ANALYSIS SUMMARY
+Content: ${analysisResult.content}
+Verdict: ${analysisResult.result}
+Confidence: ${analysisResult.confidence}%
+Date: ${analysisResult.date}
+
+DETAILED ANALYSIS
+Factual Accuracy: ${analysisResult.analysis.factualAccuracy}%
+Source Credibility: ${analysisResult.analysis.sourceCredibility}%
+Sentiment Bias: ${analysisResult.analysis.sentimentBias}%
+Linguistic Patterns: ${analysisResult.analysis.linguisticPatterns}%
+
+KEY FACTORS
+${analysisResult.factors.map(factor => `• ${factor}`).join('\n')}
+
+RECOMMENDATIONS
+${analysisResult.recommendations.map(rec => `• ${rec}`).join('\n')}
+
+${analysisResult.extractedText ? `\nEXTRACTED TEXT\n${analysisResult.extractedText}` : ''}
+
+---
+Generated by Fake News Detection Platform
+    `;
+
+    // Create and download PDF-like text file (for now)
+    const blob = new Blob([pdfContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `fake-news-report-${Date.now()}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -154,9 +368,17 @@ const Dashboard = () => {
               </nav>
             </div>
             <div className="header-right">
+              <div className="api-status">
+                <span className={`status-indicator ${apiStatus}`}>
+                  {apiStatus === 'online' ? '🟢' : apiStatus === 'offline' ? '🔴' : '🟡'}
+                </span>
+                <span className="status-text">
+                  API: {apiStatus === 'online' ? 'Connected' : apiStatus === 'offline' ? 'Offline' : 'Checking...'}
+                </span>
+              </div>
               <div className="user-info">
-                <span className="user-name">Welcome, John Doe</span>
-                <button className="logout-btn">Logout</button>
+                <span className="user-name">Welcome, {user?.fullName || 'Guest'}</span>
+                <button className="logout-btn" onClick={() => { logout(); navigate('/'); }}>Logout</button>
               </div>
             </div>
           </div>
@@ -224,14 +446,60 @@ const Dashboard = () => {
                     )}
                   </button>
                 </div>
+
+                <div className="option-card">
+                  <h3>📷 Image Analysis</h3>
+                  <p>Upload an image containing news text to analyze</p>
+                  <div className="image-upload-area">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="image-input"
+                      id="image-upload"
+                    />
+                    <label htmlFor="image-upload" className="image-upload-label">
+                      {inputImage ? (
+                        <div className="image-preview">
+                          <img src={inputImage.preview} alt="Preview" />
+                          <span>{inputImage.file.name}</span>
+                        </div>
+                      ) : (
+                        <div className="upload-placeholder">
+                          <span>📷</span>
+                          <span>Click to upload image</span>
+                        </div>
+                      )}
+                    </label>
+                  </div>
+                  <button 
+                    onClick={handleImageAnalysis}
+                    disabled={!inputImage || isAnalyzing}
+                    className="btn btn-primary"
+                  >
+                    {isAnalyzing ? (
+                      <>
+                        <span className="loading"></span>
+                        Analyzing Image...
+                      </>
+                    ) : (
+                      'Analyze Image'
+                    )}
+                  </button>
+                </div>
               </div>
 
               {analysisResult && (
                 <div className="analysis-result">
                   <div className="result-header">
                     <h3>Analysis Result</h3>
-                    <div className={`result-badge ${analysisResult.result.toLowerCase()}`}>
-                      {analysisResult.result}
+                    <div className="result-actions">
+                      <div className={`result-badge ${analysisResult.result.toLowerCase()}`}>
+                        {analysisResult.result}
+                      </div>
+                      <button onClick={generatePDFReport} className="btn btn-secondary pdf-btn">
+                        📄 Download Report
+                      </button>
                     </div>
                   </div>
 

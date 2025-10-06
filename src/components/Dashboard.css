@@ -68,6 +68,94 @@
 .header-right {
   display: flex;
   align-items: center;
+  gap: 20px;
+}
+
+.api-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f8fafc;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+}
+
+.status-indicator {
+  font-size: 12px;
+}
+
+.status-text {
+  font-size: 13px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* Image Upload Styles */
+.image-upload-area {
+  margin: 16px 0;
+}
+
+.image-input {
+  display: none;
+}
+
+.image-upload-label {
+  display: block;
+  border: 2px dashed #e2e8f0;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.image-upload-label:hover {
+  border-color: #667eea;
+  background: #f8fafc;
+}
+
+.upload-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  color: #64748b;
+}
+
+.upload-placeholder span:first-child {
+  font-size: 24px;
+}
+
+.image-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.image-preview img {
+  max-width: 200px;
+  max-height: 150px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.image-preview span {
+  font-size: 12px;
+  color: #64748b;
+}
+
+/* Result Actions */
+.result-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.pdf-btn {
+  font-size: 14px;
+  padding: 8px 16px;
 }
 
 .user-info {

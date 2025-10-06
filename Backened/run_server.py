@@ -65,6 +65,7 @@ def check_spacy_model():
         except subprocess.CalledProcessError:
             print("❌ Failed to install spaCy model. Some features may not work.")
             return False
+
 def setup_environment():
     """Setup environment variables"""
     load_dotenv()  # Load environment variables from .env file

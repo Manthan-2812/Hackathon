@@ -1,8 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import TermsModal from './TermsModal';
 import './LandingPage.css';
 
 const LandingPage = () => {
+  const [showTermsModal, setShowTermsModal] = useState(false);
+  const [modalType, setModalType] = useState('terms');
+
+  const handleContactClick = () => {
+    window.open('mailto:contact@fakenewsdetector.com');
+  };
+
+  const handlePrivacyClick = () => {
+    setModalType('privacy');
+    setShowTermsModal(true);
+  };
+
+  const handleTermsClick = () => {
+    setModalType('terms');
+    setShowTermsModal(true);
+  };
+
   return (
     <div className="landing-page">
       {/* Header */}
@@ -186,8 +204,9 @@ const LandingPage = () => {
               <h4>Company</h4>
               <ul>
                 <li><a href="#about">About</a></li>
-                <li><button className="link-button" onClick={() => window.open('mailto:contact@fakenewsdetector.com')}>Contact</button></li>
-                <li><button className="link-button" onClick={() => alert('Privacy policy would open here')}>Privacy</button></li>
+                <li><button className="link-button" onClick={handleContactClick}>Contact</button></li>
+                <li><button className="link-button" onClick={handleTermsClick}>Terms</button></li>
+                <li><button className="link-button" onClick={handlePrivacyClick}>Privacy</button></li>
               </ul>
             </div>
           </div>
@@ -196,6 +215,12 @@ const LandingPage = () => {
           </div>
         </div>
       </footer>
+
+      <TermsModal 
+        isOpen={showTermsModal}
+        onClose={() => setShowTermsModal(false)}
+        type={modalType}
+      />
     </div>
   );
 };
