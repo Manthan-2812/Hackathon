@@ -265,7 +265,7 @@ def analyze_with_patterns(text: str, title: str = None) -> Dict[str, Any]:
         # Convert to lowercase for analysis
         content = (text + " " + (title or "")).lower()
         
-                # Fake news indicators
+                        # Fake news indicators
         fake_indicators = [
             "breaking:", "urgent:", "shocking", "unbelievable", "scientists hate this",
             "doctors don't want you to know", "secret", "conspiracy", "cover-up",
@@ -273,7 +273,17 @@ def analyze_with_patterns(text: str, title: str = None) -> Dict[str, Any]:
             "click here", "you won't believe", "this will shock you",
             "sun will rise from the west", "earth's rotation is reversing",
             "magnetic field changes", "two weeks of darkness", "first time in history",
-            "scientists confirm impossible", "gravity will reverse", "time will stop"
+            "scientists confirm impossible", "gravity will reverse", "time will stop",
+            # Government/Free offer scams
+            "free iphone", "free phone", "government giving", "all students will receive",
+            "register your name", "claim the offer", "viral message", "whatsapp",
+            "fraudulent websites", "no such scheme exists", "officials have confirmed",
+            "warned the public", "sharing personal details", "digital education initiative",
+            # Common scam patterns
+            "too good to be true", "limited time offer", "act now", "exclusive offer",
+            "government scheme", "free money", "cash prize", "lottery winner",
+            "congratulations you have won", "claim your prize", "verify your details",
+            "suspicious website", "fake website", "scam alert", "hoax"
         ]
         
         # Real news indicators  
@@ -287,13 +297,22 @@ def analyze_with_patterns(text: str, title: str = None) -> Dict[str, Any]:
         fake_count = sum(1 for indicator in fake_indicators if indicator in content)
         real_count = sum(1 for indicator in real_indicators if indicator in content)
         
-                # Calculate confidence based on patterns
+                        # Calculate confidence based on patterns
         total_indicators = fake_count + real_count
-        if total_indicators == 0:
+        
+        # Check for government scam patterns specifically
+        gov_scam_patterns = ["free iphone", "free phone", "government giving", "all students will receive", 
+                           "register your name", "viral message", "whatsapp", "fraudulent websites"]
+        gov_scam_count = sum(1 for pattern in gov_scam_patterns if pattern in content)
+        
+        if gov_scam_count >= 2:  # If multiple government scam indicators
+            verdict = "FAKE"
+            confidence = min(0.95, 0.85 + gov_scam_count * 0.05)
+        elif total_indicators == 0:
             verdict = "REAL"
             confidence = 0.75  # Default to REAL for neutral content
         elif fake_count > real_count:
-            verdict = "FAKE"  # Keep FAKE detection working
+            verdict = "FAKE"
             confidence = min(0.95, 0.75 + (fake_count - real_count) * 0.1)
         else:
             verdict = "REAL" 
