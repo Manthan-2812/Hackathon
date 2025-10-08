@@ -249,5 +249,5 @@ async def get_evidence(query: str):
     }
 
 # Vercel serverless function handler
-def handler(request):
-    return app(request)
+from mangum import Mangum
+handler = Mangum(app)
